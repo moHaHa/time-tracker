@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Time Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .timer {
+            margin-bottom: 20px;
+        }
+
+        #timerDisplay {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        #playButton {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .timeline {
+            margin-top: 20px;
+        }
+
+        .timeline h2 {
+            margin-bottom: 10px;
+        }
+
+        #timelineList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #timelineList li {
+            background-color: #fff;
+            margin: 5px 0;
+            padding: 10px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="timer">
+            <h1 id="timerDisplay">00:00:00</h1>
+            <button id="playButton"><i class="fas fa-play"></i> Start</button>
+        </div>
+        <div class="timeline">
+            <h2>Daily Timeline</h2>
+            <ul id="timelineList"></ul>
+        </div>
+    </div>
+    <script>
+        let timer;
+        let startTime;
+        let isRunning = false;
+        let elapsedTime = 0;
+
+        document.getElementById('playButton').addEventListener('click', () => {
+            if (isRunning) {
+                stopTimer();
+            } else {
+                startTimer();
+            }
+        });
+
+        function startTimer() {
+            isRunning = true;
+            startTime = Date.now() - elapsedTime;
+            timer = setInterval(updateTimer, 1000);
+            document.getElementById('playButton').innerHTML = '<i class="fas fa-stop"></i> Stop';
+            localStorage.setItem('isRunning', isRunning);
+            localStorage.setItem('startTime', startTime);
+        }
+
+        function stopTimer() {
+            isRunning = false;
+            clearInterval(timer);
+            elapsedTime = Date.now() - startTime;
+            document.getElementById('playButton').innerHTML = '<i class="fas fa-play"></i> Start';
+            localStorage.setItem('isRunning', isRunning);
+            localStorage.setItem('elapsedTime', elapsedTime);
+        }
+
+        function updateTimer() {
+            const currentTime = Date.now();
+            const diff = currentTime - startTime;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById('timerDisplay').textContent = 
+                `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                document.title =  `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
+        }
+
+        function pad(number) {
+            return number.toString().padStart(2, '0');
+        }
+
+        // Reset at midnight and add to timeline
+        setInterval(() => {
+            const now = new Date();
+            if (now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+                addToTimeline();
+                resetTimer();
+            }
+        }, 1000);
+
+        function resetTimer() {
+            stopTimer();
+            elapsedTime = 0;
+            document.getElementById('timerDisplay').textContent = '00:00:00';
+            localStorage.setItem('elapsedTime', elapsedTime);
+        }
+
+        function addToTimeline() {
+            const li = document.createElement('li');
+            const now = new Date();
+            const dateString = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            li.textContent = `${dateString}: ${document.getElementById('timerDisplay').textContent}`;
+            document.getElementById('timelineList').appendChild(li);
+
+            const timeline = JSON.parse(localStorage.getItem('timeline')) || [];
+            timeline.push(li.textContent);
+            localStorage.setItem('timeline', JSON.stringify(timeline));
+        }
+
+        function loadState() {
+            const savedIsRunning = localStorage.getItem('isRunning') === 'true';
+            const savedStartTime = parseInt(localStorage.getItem('startTime'));
+            const savedElapsedTime = parseInt(localStorage.getItem('elapsedTime'));
+            const savedTimeline = JSON.parse(localStorage.getItem('timeline')) || [];
+
+            if (savedIsRunning) {
+                isRunning = savedIsRunning;
+                startTime = savedStartTime;
+                elapsedTime = savedElapsedTime;
+                startTimer();
+            } else if (savedElapsedTime) {
+                elapsedTime = savedElapsedTime;
+                updateTimer();
+            }
+
+            const timelineList = document.getElementById('timelineList');
+            savedTimeline.forEach(entry => {
+                const li = document.createElement('li');
+                li.textContent = entry;
+                timelineList.appendChild(li);
+            });
+        }
+
+        window.onload = loadState;
+    </script>
+</body>
+</html>
